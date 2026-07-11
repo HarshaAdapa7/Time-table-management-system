@@ -34,13 +34,18 @@ try:
     # Auto-seed if database is empty of core schedule metadata or has outdated counts
     from app.database import SessionLocal
     from app.models.user import User
-    from app.models.schedule import Classroom, Subject
+    from app.models.schedule import Classroom, Subject, Faculty
     db = SessionLocal()
     try:
         classroom_count = db.query(Classroom).count()
         subjects_exist = db.query(Subject).first()
-        if classroom_count < 11 or not subjects_exist:
-            logger.info("Classroom count is low or database is empty. Resetting database...")
+        try:
+            faculties_with_subjects = db.query(Faculty).filter(Faculty.qualified_subjects.any()).count()
+        except Exception:
+            faculties_with_subjects = 0
+            
+        if classroom_count < 11 or not subjects_exist or faculties_with_subjects == 0:
+            logger.info("Classroom count is low, subjects are missing, or faculties have no qualifications. Resetting database...")
             db.close()
             # Dispose connection pool to release handles
             engine.dispose()
