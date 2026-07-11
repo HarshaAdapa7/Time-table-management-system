@@ -50,31 +50,22 @@ try:
             # Dispose connection pool to release handles
             engine.dispose()
             
-            # For SQLite, try deleting the database file safely
-            if settings.DATABASE_URL.startswith("sqlite"):
-                db_file = "timetable.db"
-                if "./timetable.db" in settings.DATABASE_URL:
-                    db_file = "timetable.db"
-                elif "sqlite:///" in settings.DATABASE_URL:
-                    # Strip prefix to get relative or absolute path
-                    db_file = settings.DATABASE_URL.replace("sqlite:///", "")
-                
-                if os.path.exists(db_file):
-                    try:
-                        os.remove(db_file)
-                        logger.info(f"Successfully deleted old SQLite database file: {db_file}")
-                    except Exception as e:
-                        logger.warning(f"Could not delete SQLite file: {e}")
-            else:
-                # For PostgreSQL, drop all tables directly
-                try:
+            # Reset database tables cleanly using drop_all/create_all
+            try:
+                if settings.DATABASE_URL.startswith("sqlite"):
+                    with engine.connect() as conn:
+                        conn.execute(text("PRAGMA foreign_keys = OFF"))
+                        conn.commit()
+                        Base.metadata.drop_all(bind=conn)
+                        Base.metadata.create_all(bind=conn)
+                        conn.commit()
+                else:
                     Base.metadata.drop_all(bind=engine)
-                    logger.info("Dropped all database tables for PostgreSQL.")
-                except Exception as e:
-                    logger.warning(f"Could not drop all tables: {e}")
-
-            # Recreate all tables
-            Base.metadata.create_all(bind=engine)
+                    Base.metadata.create_all(bind=engine)
+                logger.info("Successfully dropped and recreated all database tables.")
+            except Exception as e:
+                logger.error(f"Error resetting database tables: {e}")
+                
             # Run the seed script directly
             from app.services.seeder import seed_database
             seed_database()
