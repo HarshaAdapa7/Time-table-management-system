@@ -40,18 +40,34 @@ try:
         classroom_count = db.query(Classroom).count()
         subjects_exist = db.query(Subject).first()
         if classroom_count < 11 or not subjects_exist:
-            logger.info("Classroom count is low or database is empty. Resetting SQLite database file...")
+            logger.info("Classroom count is low or database is empty. Resetting database...")
             db.close()
-            # Dispose connection pool to release file handles
+            # Dispose connection pool to release handles
             engine.dispose()
-            # Safely delete database file to bypass foreign key constraint blocks
-            db_file = "timetable.db"
-            if os.path.exists(db_file):
+            
+            # For SQLite, try deleting the database file safely
+            if settings.DATABASE_URL.startswith("sqlite"):
+                db_file = "timetable.db"
+                if "./timetable.db" in settings.DATABASE_URL:
+                    db_file = "timetable.db"
+                elif "sqlite:///" in settings.DATABASE_URL:
+                    # Strip prefix to get relative or absolute path
+                    db_file = settings.DATABASE_URL.replace("sqlite:///", "")
+                
+                if os.path.exists(db_file):
+                    try:
+                        os.remove(db_file)
+                        logger.info(f"Successfully deleted old SQLite database file: {db_file}")
+                    except Exception as e:
+                        logger.warning(f"Could not delete SQLite file: {e}")
+            else:
+                # For PostgreSQL, drop all tables directly
                 try:
-                    os.remove(db_file)
-                    logger.info("Successfully deleted old timetable.db file.")
+                    Base.metadata.drop_all(bind=engine)
+                    logger.info("Dropped all database tables for PostgreSQL.")
                 except Exception as e:
-                    logger.warning(f"Could not delete database file: {e}")
+                    logger.warning(f"Could not drop all tables: {e}")
+
             # Recreate all tables
             Base.metadata.create_all(bind=engine)
             # Run the seed script directly
