@@ -173,8 +173,8 @@ def generate_base_timetable(db: Session, department_id: int | None = None) -> di
                 
                 consecutive_penalties.append(triple_active)
 
-    # Minimize penalties
-    model.Minimize(sum(consecutive_penalties))
+    # Minimize penalties (Commented out to solve instantly as a pure feasibility problem on slow cloud CPUs)
+    # model.Minimize(sum(consecutive_penalties))
     
     # 3. Solve the Model
     solver = cp_model.CpSolver()
