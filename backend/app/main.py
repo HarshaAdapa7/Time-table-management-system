@@ -45,7 +45,7 @@ try:
             Base.metadata.drop_all(bind=engine)
             Base.metadata.create_all(bind=engine)
             # Run the seed script directly
-            from seed import seed_database
+            from app.services.seeder import seed_database
             seed_database()
             logger.info("Database seeded successfully.")
     finally:
