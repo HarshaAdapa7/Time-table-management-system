@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #080c14;
+  color: #f8fafc;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Glassmorphism Panel */
+.glass-panel {
+  background: rgba(18, 24, 41, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Glassmorphism Input */
+.glass-input {
+  background: rgba(10, 15, 29, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  transition: all 0.2s ease-in-out;
+}
+
+.glass-input:focus {
+  border-color: #3b4eff;
+  box-shadow: 0 0 0 2px rgba(59, 78, 255, 0.2);
+  outline: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0f1d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1f2943;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b4eff;
+}
+
+/* Glow effects */
+.glow-accent {
+  box-shadow: 0 0 40px -10px rgba(59, 78, 255, 0.3);
+}
+
+.glow-accent-sm {
+  box-shadow: 0 0 20px -5px rgba(59, 78, 255, 0.2);
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+  
+  body * {
+    visibility: hidden;
+  }
+  
+  .print-section, .print-section * {
+    visibility: visible;
+  }
+  
+  .print-section {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  /* Fix horizontal cutoff */
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+  
+  table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+  
+  th, td {
+    padding: 4px !important;
+    word-wrap: break-word;
+  }
+
+  /* Reduce text size slightly for print to ensure fit */
+  .print-section * {
+    font-size: 0.95em;
+  }
+  .print-section .text-xs {
+    font-size: 0.7rem !important;
+  }
+  .print-section .text-\[10px\] {
+    font-size: 0.55rem !important;
+  }
+  .print-section .text-\[11px\] {
+    font-size: 0.6rem !important;
+  }
+  
+  /* Remove borders that look weird in print or adjust them */
+  .glass-panel {
+    background: white !important;
+    border: none !important;
+  }
+  
+  body {
+    background-color: white !important;
+  }
+  .print-section {
+    color: black !important;
+  }
+  
+  /* Prevent page breaks inside rows */
+  tr {
+    page-break-inside: avoid;
+  }
+}
