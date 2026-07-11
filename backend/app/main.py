@@ -29,6 +29,21 @@ try:
         except Exception:
             # Already exists or dialect doesn't support it
             pass
+            
+    # Auto-seed if database is empty
+    from app.database import SessionLocal
+    from app.models.user import User
+    db = SessionLocal()
+    try:
+        admin_exists = db.query(User).filter(User.role == "ADMIN").first()
+        if not admin_exists:
+            logger.info("Admin user not found. Seeding default database data...")
+            from seed import seed_database
+            seed_database()
+            logger.info("Database seeded successfully.")
+    finally:
+        db.close()
+
     logger.info("Database tables initialized successfully.")
 except Exception as e:
     logger.error(f"Failed to initialize database: {e}")
@@ -40,14 +55,31 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Set CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import Response
+
+class CustomCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        if request.method == "OPTIONS":
+            response = Response(status_code=204)
+            origin = request.headers.get("Origin") or request.headers.get("origin")
+            if origin:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, bypass-tunnel-reminder"
+            return response
+            
+        response = await call_next(request)
+        origin = request.headers.get("Origin") or request.headers.get("origin")
+        if origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, bypass-tunnel-reminder"
+        return response
+
+app.add_middleware(CustomCORSMiddleware)
 
 # Startup events
 @app.on_event("startup")

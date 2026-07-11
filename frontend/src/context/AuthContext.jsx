@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        'bypass-tunnel-reminder': 'true'
       },
       body: formData,
     });
@@ -62,6 +63,7 @@ export const AuthProvider = ({ children }) => {
   const authenticatedFetch = async (url, options = {}) => {
     const headers = {
       ...options.headers,
+      'bypass-tunnel-reminder': 'true'
     };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
