@@ -44,13 +44,15 @@ try:
             # Drop and recreate all tables to avoid foreign key violations
             Base.metadata.drop_all(bind=engine)
             Base.metadata.create_all(bind=engine)
-            # Reconnect and run the seed script
-            db = SessionLocal()
+            # Run the seed script directly
             from seed import seed_database
             seed_database()
             logger.info("Database seeded successfully.")
     finally:
-        db.close()
+        try:
+            db.close()
+        except Exception:
+            pass
 
     logger.info("Database tables initialized successfully.")
 except Exception as e:
