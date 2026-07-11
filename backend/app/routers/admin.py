@@ -142,11 +142,12 @@ def debug_db(db: Session = Depends(get_db)):
     for f in facs:
         res.append({
             "faculty_name": f.user.name if f.user else "Unknown",
+            "department_id": f.department_id,
             "qualified_subjects": [s.code for s in f.qualified_subjects]
         })
     return {
         "faculties": res,
         "classrooms": [{"id": r.id, "num": r.room_number} for r in db.query(Classroom).all()],
-        "subjects": [{"id": s.id, "code": s.code} for s in db.query(Subject).all()],
-        "classes": [{"id": c.id, "name": c.name} for c in db.query(ClassGroup).all()]
+        "subjects": [{"id": s.id, "code": s.code, "department_id": s.department_id} for s in db.query(Subject).all()],
+        "classes": [{"id": c.id, "name": c.name, "department_id": c.department_id} for c in db.query(ClassGroup).all()]
     }
