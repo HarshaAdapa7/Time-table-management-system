@@ -39,10 +39,19 @@ try:
         classroom_count = db.query(Classroom).count()
         subjects_exist = db.query(Subject).first()
         if classroom_count < 11 or not subjects_exist:
-            logger.info("Classroom count is low or database is empty. Wiping database cleanly...")
+            logger.info("Classroom count is low or database is empty. Resetting SQLite database file...")
             db.close()
-            # Drop and recreate all tables to avoid foreign key violations
-            Base.metadata.drop_all(bind=engine)
+            # Dispose connection pool to release file handles
+            engine.dispose()
+            # Safely delete database file to bypass foreign key constraint blocks
+            db_file = "timetable.db"
+            if os.path.exists(db_file):
+                try:
+                    os.remove(db_file)
+                    logger.info("Successfully deleted old timetable.db file.")
+                except Exception as e:
+                    logger.warning(f"Could not delete database file: {e}")
+            # Recreate all tables
             Base.metadata.create_all(bind=engine)
             # Run the seed script directly
             from app.services.seeder import seed_database
