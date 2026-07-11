@@ -183,3 +183,13 @@ def get_timetable_conflicts(db: Session = Depends(get_db), current_user: User = 
         SubstituteAllocation.status == "UNRESOLVED"
     ).all()
     return unresolved
+
+@router.get("/classrooms", response_model=List[dict])
+def list_classrooms(db: Session = Depends(get_db), current_user: User = Depends(require_any_user)):
+    classrooms = db.query(Classroom).all()
+    return [{"id": r.id, "name": r.name, "room_number": r.room_number, "capacity": r.capacity} for r in classrooms]
+
+@router.get("/subjects", response_model=List[dict])
+def list_subjects(db: Session = Depends(get_db), current_user: User = Depends(require_any_user)):
+    subjects = db.query(Subject).all()
+    return [{"id": s.id, "code": s.code, "name": s.name, "hours_required": s.hours_required_per_week} for s in subjects]

@@ -57,11 +57,17 @@ export default function AdminDashboard() {
         setSelectedClassId(clsData[0].id.toString());
       }
 
+      const roomsRes = await authenticatedFetch('/api/schedule/classrooms');
+      const roomsData = roomsRes.ok ? await roomsRes.json() : [];
+
+      const subjectsRes = await authenticatedFetch('/api/schedule/subjects');
+      const subjectsData = subjectsRes.ok ? await subjectsRes.json() : [];
+
       setStats({
         faculty: wlData.length,
-        subjects: 7, 
+        subjects: subjectsData.length || 7,
         classes: clsData.length,
-        rooms: 5
+        rooms: roomsData.length || 5
       });
     } catch (err) {
       console.error("Error fetching admin data:", err);
