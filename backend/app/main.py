@@ -30,14 +30,16 @@ try:
             # Already exists or dialect doesn't support it
             pass
             
-    # Auto-seed if database is empty
+    # Auto-seed if database is empty of core schedule metadata
     from app.database import SessionLocal
     from app.models.user import User
+    from app.models.schedule import Classroom, Subject
     db = SessionLocal()
     try:
-        admin_exists = db.query(User).filter(User.role == "ADMIN").first()
-        if not admin_exists:
-            logger.info("Admin user not found. Seeding default database data...")
+        classrooms_exist = db.query(Classroom).first()
+        subjects_exist = db.query(Subject).first()
+        if not classrooms_exist or not subjects_exist:
+            logger.info("Classrooms or Subjects not found. Seeding default database data...")
             from seed import seed_database
             seed_database()
             logger.info("Database seeded successfully.")
