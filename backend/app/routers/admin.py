@@ -151,3 +151,112 @@ def debug_db(db: Session = Depends(get_db)):
         "subjects": [{"id": s.id, "code": s.code, "department_id": s.department_id} for s in db.query(Subject).all()],
         "classes": [{"id": c.id, "name": c.name, "department_id": c.department_id} for c in db.query(ClassGroup).all()]
     }
+
+@router.get("/run-test")
+def run_test(db: Session = Depends(get_db)):
+    from ortools.sat.python import cp_model
+    from collections import defaultdict
+    
+    faculties = db.query(Faculty).all()
+    subjects = db.query(Subject).all()
+    class_groups = db.query(ClassGroup).all()
+    classrooms = db.query(Classroom).all()
+    
+    model = cp_model.CpModel()
+    
+    class_room_map = {}
+    for i, c in enumerate(class_groups):
+        room_idx = i % len(classrooms)
+        class_room_map[c.id] = classrooms[room_idx].id
+        
+    DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    PERIODS = list(range(1, 7))
+    
+    variables = {}
+    qualified_facs_for_subject = defaultdict(list)
+    for f in faculties:
+        for s in f.qualified_subjects:
+            qualified_facs_for_subject[s.id].append(f.id)
+            
+    for d in DAYS:
+        for p in PERIODS:
+            for c in class_groups:
+                r_id = class_room_map.get(c.id)
+                if not r_id:
+                    continue
+                for s in subjects:
+                    if c.department_id != s.department_id:
+                        continue
+                    eligible_facs = qualified_facs_for_subject[s.id]
+                    for f_id in eligible_facs:
+                        key = (d, p, c.id, f_id, s.id, r_id)
+                        var_name = f"x_{d}_{p}_{c.id}_{f_id}_{s.id}_{r_id}"
+                        variables[key] = model.NewBoolVar(var_name)
+                        
+    # Constraint checks: list class-subject requirements that have NO variables
+    unmapped = []
+    for c in class_groups:
+        for s in subjects:
+            if c.department_id != s.department_id:
+                continue
+            slots_for_class_subject = [
+                variables[key] for key in variables
+                if key[2] == c.id and key[4] == s.id
+            ]
+            if not slots_for_class_subject:
+                unmapped.append(f"Class: {c.name}, Subject: {s.code} has 0 variables!")
+                
+    # Add Constraints
+    for d in DAYS:
+        for p in PERIODS:
+            for c in class_groups:
+                slots_for_class = [variables[key] for key in variables if key[0] == d and key[1] == p and key[2] == c.id]
+                model.AddAtMostOne(slots_for_class)
+                
+    for d in DAYS:
+        for p in PERIODS:
+            for f in faculties:
+                slots_for_faculty = [variables[key] for key in variables if key[0] == d and key[1] == p and key[3] == f.id]
+                model.AddAtMostOne(slots_for_faculty)
+                
+    for d in DAYS:
+        for p in PERIODS:
+            for r in classrooms:
+                slots_for_room = [variables[key] for key in variables if key[0] == d and key[1] == p and key[5] == r.id]
+                model.AddAtMostOne(slots_for_room)
+                
+    for c in class_groups:
+        for s in subjects:
+            if c.department_id != s.department_id:
+                continue
+            slots_for_class_subject = [variables[key] for key in variables if key[2] == c.id and key[4] == s.id]
+            if slots_for_class_subject:
+                model.Add(sum(slots_for_class_subject) == s.hours_required_per_week)
+                
+    for f in faculties:
+        slots_for_faculty_all = [variables[key] for key in variables if key[3] == f.id]
+        if slots_for_faculty_all:
+            model.Add(sum(slots_for_faculty_all) <= f.max_hours_per_week)
+            
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = 5.0
+    status = solver.Solve(model)
+    
+    status_name = "UNKNOWN"
+    if status == cp_model.OPTIMAL:
+        status_name = "OPTIMAL"
+    elif status == cp_model.FEASIBLE:
+        status_name = "FEASIBLE"
+    elif status == cp_model.INFEASIBLE:
+        status_name = "INFEASIBLE"
+        
+    class_map = {c.id: c.name for c in class_groups}
+    room_map = {r.id: r.name for r in classrooms}
+    class_room_names = {class_map[c_id]: room_map[r_id] for c_id, r_id in class_room_map.items() if c_id in class_map and r_id in room_map}
+    
+    return {
+        "status": status_name,
+        "num_variables": len(variables),
+        "unmapped_requirements": unmapped,
+        "class_room_map": class_room_names,
+    }
