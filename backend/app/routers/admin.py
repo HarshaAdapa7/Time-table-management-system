@@ -1,5 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, Body
 from sqlalchemy.orm import Session
+import traceback
+import logging
+
+logger = logging.getLogger("app")
 from typing import List, Optional
 
 from app.database import get_db
@@ -70,14 +74,23 @@ async def upload_faculty(
 
 @router.post("/generate-base")
 def trigger_base_generation(
+    payload: Optional[dict] = Body(None),
     department_id: Optional[int] = None, 
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
-    result = generate_base_timetable(db, department_id)
-    if result["status"] == "FAILED":
-        raise HTTPException(status_code=422, detail=result)
-    return result
+    logger.info(f"generate-base endpoint hit. department_id: {department_id}, payload: {payload}")
+    try:
+        result = generate_base_timetable(db, department_id)
+        if result["status"] == "FAILED":
+            logger.warning(f"generate-base solver execution failed: {result}")
+            raise HTTPException(status_code=422, detail=result)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"generate-base failed with exception: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/reports/workload")
 def get_workload_report(
