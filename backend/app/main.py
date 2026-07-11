@@ -31,24 +31,34 @@ try:
             pass
             
     # Auto-seed if database is empty of core schedule metadata or has outdated counts
-    from app.database import SessionLocal
-    from app.models.user import User
-    from app.models.schedule import Classroom, Subject, ClassGroup
+    from app.database import SessionLocal, engine, Base
+    from app.models.schedule import Classroom
     db = SessionLocal()
     try:
         classroom_count = db.query(Classroom).count()
-        subjects_exist = db.query(Subject).first()
-        if classroom_count < 11 or not subjects_exist:
-            logger.info("Classroom count is low or database is empty. Wiping and re-seeding full database...")
-            db.query(Classroom).delete()
-            db.query(ClassGroup).delete()
-            db.query(Subject).delete()
-            db.commit()
+        if classroom_count < 11:
+            logger.info("Classroom count is low. Wiping and re-seeding full database to avoid foreign key issues...")
+            db.close()
+            Base.metadata.drop_all(bind=engine)
+            Base.metadata.create_all(bind=engine)
+            
+            # Ensure leave_balance column is added
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE faculties ADD COLUMN leave_balance INTEGER DEFAULT 15"))
+                    conn.commit()
+                except Exception:
+                    pass
+                    
             from seed import seed_database
             seed_database()
-            logger.info("Database seeded successfully.")
+            logger.info("Database wiped and seeded successfully.")
     finally:
-        db.close()
+        try:
+            db.close()
+        except:
+            pass
 
     logger.info("Database tables initialized successfully.")
 except Exception as e:
