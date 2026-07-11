@@ -30,16 +30,20 @@ try:
             # Already exists or dialect doesn't support it
             pass
             
-    # Auto-seed if database is empty of core schedule metadata
+    # Auto-seed if database is empty of core schedule metadata or has outdated counts
     from app.database import SessionLocal
     from app.models.user import User
-    from app.models.schedule import Classroom, Subject
+    from app.models.schedule import Classroom, Subject, ClassGroup
     db = SessionLocal()
     try:
-        classrooms_exist = db.query(Classroom).first()
+        classroom_count = db.query(Classroom).count()
         subjects_exist = db.query(Subject).first()
-        if not classrooms_exist or not subjects_exist:
-            logger.info("Classrooms or Subjects not found. Seeding default database data...")
+        if classroom_count < 11 or not subjects_exist:
+            logger.info("Classroom count is low or database is empty. Wiping and re-seeding full database...")
+            db.query(Classroom).delete()
+            db.query(ClassGroup).delete()
+            db.query(Subject).delete()
+            db.commit()
             from seed import seed_database
             seed_database()
             logger.info("Database seeded successfully.")
