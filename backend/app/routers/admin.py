@@ -134,3 +134,19 @@ def get_audit_logs(
         "performer_name": l.actor.name if l.actor else "System",
         "timestamp": l.timestamp.isoformat()
     } for l in logs]
+
+@router.get("/debug-db")
+def debug_db(db: Session = Depends(get_db)):
+    facs = db.query(Faculty).all()
+    res = []
+    for f in facs:
+        res.append({
+            "faculty_name": f.user.name if f.user else "Unknown",
+            "qualified_subjects": [s.code for s in f.qualified_subjects]
+        })
+    return {
+        "faculties": res,
+        "classrooms": [{"id": r.id, "num": r.room_number} for r in db.query(Classroom).all()],
+        "subjects": [{"id": s.id, "code": s.code} for s in db.query(Subject).all()],
+        "classes": [{"id": c.id, "name": c.name} for c in db.query(ClassGroup).all()]
+    }
